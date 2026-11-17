@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Touchline | Брэндийн самбар</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}">
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <a class="wordmark" href="{{ url_for('dashboard') }}">TOUCHLINE</a>
+      <nav class="side-nav" aria-label="Үндсэн цэс">
+        <a class="nav-link{% if active_page == 'content' %} is-active{% endif %}" href="{{ url_for('dashboard') }}" {% if active_page == 'content' %}aria-current="page"{% endif %}>Контент</a>
+        <a class="nav-link{% if active_page == 'facebook' %} is-active{% endif %}" href="{{ url_for('facebook') }}" {% if active_page == 'facebook' %}aria-current="page"{% endif %}>Facebook</a>
+        <a class="nav-link{% if active_page == 'chat' %} is-active{% endif %}" href="{{ url_for('chat') }}" {% if active_page == 'chat' %}aria-current="page"{% endif %}>Чат</a>
+        <a class="nav-link{% if active_page == 'bookings' %} is-active{% endif %}" href="{{ url_for('bookings') }}" {% if active_page == 'bookings' %}aria-current="page"{% endif %}>Захиалга</a>
+      </nav>
+      <div class="sidebar-account">
+        <span class="account-email">{{ email }}</span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="logout-button" type="submit">Гарах</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="flash-message dashboard-alert{% if category == 'success' %} flash-message-success{% endif %}" role="alert">{{ message }}</div>
+      {% endfor %}
+
+      {% if active_page == 'content' %}
+        <div class="dashboard-heading">
+          <div>
+            <h1 class="page-title">Ноорог постууд</h1>
+            <p class="page-subtitle">Нийтэлж амжаагүй постууд энд харагдана.</p>
+          </div>
+          <span class="draft-count">Нийт {{ drafts|length if drafts is not none else 0 }}</span>
+        </div>
+        {% if drafts is none %}
+          <div class="empty-state">Нооргуудыг одоогоор харуулах боломжгүй байна.</div>
+        {% elif drafts %}
+          <section class="draft-list" aria-label="Ноорог постын жагсаалт">
+            {% for draft in drafts %}
+              <article class="draft-card">
+                <div class="draft-card-heading">
+                  <h2>{{ draft.title }}</h2>
+                  <span class="status-pill status-pending">Хүлээгдэж байна</span>
+                </div>
+                <p>{{ draft.content }}</p>
+                <time class="draft-date">{{ draft.created_at }}</time>
+                <div class="draft-actions">
+                  <form method="post" action="{{ url_for('review_draft', draft_id=draft.id, decision='approve') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="draft-action draft-action-approve" type="submit">Батлах</button>
+                  </form>
+                  <form method="post" action="{{ url_for('review_draft', draft_id=draft.id, decision='reject') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="draft-action draft-action-reject" type="submit">Татгалзах</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </section>
+        {% else %}
+          <div class="empty-state">Одоогоор ноорог пост алга байна.</div>
+        {% endif %}
+      {% elif active_page == 'bookings' %}
+        <div class="dashboard-heading">
+          <div>
+            <h1 class="page-title">Захиалгууд</h1>
+            <p class="page-subtitle">Бүртгэгдсэн захиалгуудын жагсаалт.</p>
+          </div>
+          <span class="draft-count">Нийт {{ bookings|length if bookings is not none else 0 }}</span>
+        </div>
+        {% if bookings is none %}
+          <div class="empty-state">Захиалгуудыг одоогоор харуулах боломжгүй байна.</div>
+        {% elif bookings %}
+          {% set status_labels = {'pending': 'Хүлээгдэж байна', 'confirmed': 'Баталгаажсан', 'cancelled': 'Цуцлагдсан'} %}
+          <div class="table-wrap">
+            <table class="booking-table" aria-label="Захиалгын жагсаалт">
+              <thead>
+                <tr>
+                  <th scope="col">Захиалагч</th>
+                  <th scope="col">И-мэйл</th>
+                  <th scope="col">Огноо</th>
+                  <th scope="col">Хүний тоо</th>
+                  <th scope="col">Төлөв</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for booking in bookings %}
+                  <tr>
+                    <td>{{ booking.customer_name }}</td>
+                    <td>{{ booking.email }}</td>
+                    <td>{{ booking.booking_date }}</td>
+                    <td>{{ booking.party_size }}</td>
+                    <td><span class="status-pill status-{{ booking.status }}">{{ status_labels.get(booking.status, 'Бусад') }}</span></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">Одоогоор захиалга алга байна.</div>
+        {% endif %}
+      {% elif active_page == 'facebook' %}
+        <section class="placeholder-panel">
+          <h1 class="page-title">Facebook</h1>
+          <p>Удахгүй</p>
+        </section>
+      {% elif active_page == 'chat' %}
+        <section class="placeholder-panel">
+          <h1 class="page-title">Чат</h1>
+          <p>Удахгүй</p>
+        </section>
+      {% endif %}
+    </main>
+  </div>
+</body>
+</html>
